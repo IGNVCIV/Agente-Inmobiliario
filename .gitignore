@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────
+# SECRETOS Y CREDENCIALES  ← crítico
+# ─────────────────────────────────────────
+.env
+.env.*
+!.env.example          
+
+# ─────────────────────────────────────────
+# PYTHON
+# ─────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]              # .pyc .pyo .pyd
+*.pyo
+*.pyd
+*.pyw
+
+# Build / distribución
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+MANIFEST
+
+# ─────────────────────────────────────────
+# ENTORNOS VIRTUALES
+# ─────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ─────────────────────────────────────────
+# TESTS Y COBERTURA
+# ─────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.coveragerc
+nosetests.xml
+test-results/
+
+# ─────────────────────────────────────────
+# BASE DE DATOS (generada en runtime)
+# ─────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+backend/propiedades.db    # ruta específica del proyecto
+
+# ─────────────────────────────────────────
+# ÍNDICE FAISS (generado al iniciar el agente)
+# ─────────────────────────────────────────
+faiss_index/
+*.faiss
+*.pkl                  # embeddings serializados
+
+# ─────────────────────────────────────────
+# MEMORIA CONVERSACIONAL (runtime)
+# ─────────────────────────────────────────
+app/memoria_conversacion.json
+memoria_conversacion.json
+
+# ─────────────────────────────────────────
+# DATOS — archivos intermedios y parciales
+# ─────────────────────────────────────────
+data/processed/propiedades_detalle_parcial.csv   # salida parcial del scraper
+# data/processed/propiedades_detalle.csv         # dataset principal: decidir si va en repo
+                                                 # si es grande o sensible, agregar aquí
+
+# ─────────────────────────────────────────
+# LOGS
+# ─────────────────────────────────────────
+*.log
+*.log.*
+actualizador.log
+logs/
+
+# ─────────────────────────────────────────
+# JUPYTER
+# ─────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─────────────────────────────────────────
+# SISTEMA OPERATIVO
+# ─────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────
+# EDITORES E IDEs
+# ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.ropeproject/
+
+# ─────────────────────────────────────────
+# STREAMLIT
+# ─────────────────────────────────────────
+.streamlit/secrets.toml    # secretos de Streamlit Cloud
+
+# ─────────────────────────────────────────
+# LANGSMITH / LANGCHAIN
+# ─────────────────────────────────────────
+.langsmith/
+langsmith_traces/

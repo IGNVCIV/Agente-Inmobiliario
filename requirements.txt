@@ -1,0 +1,13 @@
+langchain
+openai
+faiss-cpu
+tiktoken
+crewai
+langchain-community
+streamlit
+pandas
+sentence-transformers
+geopy
+requests
+python-dotenv
+pytest
