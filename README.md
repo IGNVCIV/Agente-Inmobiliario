@@ -29,26 +29,61 @@ El agente está construido con los siguientes componentes principales:
 - **get_uf_value()**: Consulta el valor actual de la UF desde la API del Banco Central de Chile usando credenciales configuradas en variables de entorno.
 - **calculate_distance()**: Calcula distancias entre coordenadas usando Geopy.
 - **retrieve_properties()**: Recupera propiedades usando el pipeline RAG.
+- Integrado con CrewAI para herramientas del agente.
 
 ### 4. **RealEstateAgent** (`app/main.py`)
 - Agente principal construido con LangChain y OpenAI Functions Agent.
 - Integra herramientas para responder consultas sobre propiedades, precios en UF y distancias.
+- Utiliza memoria conversacional persistente y base de datos SQLite para búsquedas eficientes.
 
-### 5. **Prompts** (`app/prompts/system_prompt.txt`)
+### 5. **Memory** (`app/memory.py`)
+- Gestiona el historial conversacional persistente del agente.
+- Implementa ventana deslizante para mantener los últimos turnos de conversación en un archivo JSON.
+
+### 6. **Database** (`backend/db.py`)
+- Almacena propiedades en SQLite con actualización automática de valores UF desde la API del Banco Central.
+- Registra búsquedas para análisis y mejora del sistema.
+
+### 7. **UI** (`ui/streamlit_app.py`)
+- Interfaz web simple construida con Streamlit para interactuar con el agente inmobiliario.
+- Permite consultas en tiempo real y visualización de respuestas.
+
+### 8. **Prompts** (`app/prompts/system_prompt.txt`)
 - Define el comportamiento del agente como asesor virtual experto.
+
+### 9. **Tests** (`tests/`)
+- Pruebas unitarias para validar el funcionamiento del data pipeline y otros componentes.
 
 ## Modelos Utilizados
 
 - **Modelo de Lenguaje**: GPT-4o-mini (via OpenAI API)
 - **Embeddings**: Sentence Transformers (para RAG)
 - **Indexación Vectorial**: FAISS
+- **Framework de Agente**: LangChain y CrewAI
+- **Base de Datos**: SQLite
+- **Interfaz Web**: Streamlit
 
 ## Requisitos del Sistema
 
 - Python 3.8+
 - Cuenta de OpenAI con API key
 - Credenciales del Banco Central de Chile (para API UF)
+- SQLite (incluido con Python)
 - Entorno virtual recomendado
+
+## Dependencias Principales
+
+- **LangChain**: Framework para agentes de IA
+- **CrewAI**: Herramientas para agentes
+- **OpenAI**: API de modelos de lenguaje
+- **FAISS**: Indexación vectorial
+- **Streamlit**: Interfaz web
+- **Pandas**: Manipulación de datos
+- **Sentence Transformers**: Embeddings de texto
+- **Geopy**: Cálculos de distancia
+- **Requests**: Llamadas HTTP
+
+Ver `requirements.txt` para la lista completa.
 
 ## Instalación y Configuración
 
@@ -109,6 +144,13 @@ python app/main.py
 
 Esto iniciará el agente y procesará una consulta de ejemplo.
 
+### Usar la Interfaz Web
+```bash
+streamlit run ui/streamlit_app.py
+```
+
+Esto abrirá la interfaz web en el navegador para consultas interactivas.
+
 ### Probar Funcionalidades
 ```bash
 python test.py
@@ -139,23 +181,13 @@ Para desplegar en un servidor:
 3. Ejecuta `python app/main.py` o integra en una aplicación web (ej. con Streamlit en `streamlit_app.py` si se crea).
 
 ### Integración con Streamlit
-El proyecto incluye Streamlit en las dependencias. Puedes crear una interfaz web:
+El proyecto incluye una interfaz web construida con Streamlit en `ui/streamlit_app.py`. Para ejecutarla:
 
-```python
-# streamlit_app.py
-import streamlit as st
-from app.main import RealEstateAgent
-
-agent = RealEstateAgent()
-
-st.title("Agente Inmobiliario IA")
-query = st.text_input("Consulta sobre propiedades:")
-if st.button("Consultar"):
-    response = agent.respond(query)
-    st.write(response)
+```bash
+streamlit run ui/streamlit_app.py
 ```
 
-Ejecuta con `streamlit run streamlit_app.py`.
+Esto permite consultas interactivas al agente a través del navegador.
 
 ## Estructura del Proyecto
 
@@ -166,16 +198,26 @@ agente-inmobiliario/
 │   ├── main.py             # Agente principal
 │   ├── rag_pipeline.py     # Pipeline RAG
 │   ├── tools.py            # Herramientas (UF, distancia)
+│   ├── memory.py           # Memoria conversacional
 │   ├── prompts/
 │   │   └── system_prompt.txt
+│   └── __pycache__/
+├── backend/
+│   ├── data_pipeline.py    # Pipeline de datos
+│   ├── db.py               # Base de datos SQLite
 │   └── __pycache__/
 ├── data/
 │   ├── processed/          # Datos procesados de propiedades
 │   └── raw/                # Datos crudos
 ├── docs/                   # Documentación adicional
+│   └── architecture.md     # Diagrama de arquitectura
 ├── scraping/               # Scripts de scraping
 │   ├── scraper.py
 │   └── try.py
+├── tests/                  # Pruebas unitarias
+│   └── test_data_pipeline.py
+├── ui/                     # Interfaz de usuario
+│   └── streamlit_app.py    # App de Streamlit
 ├── .env                    # Variables de entorno (no commitear)
 ├── requirements.txt        # Dependencias Python
 ├── test.py                 # Script de pruebas
@@ -197,4 +239,3 @@ Este proyecto es de uso educativo. Consulta términos de OpenAI y Banco Central 
 ## Contacto
 
 Para preguntas o soporte, contacta al desarrollador.</content>
-<parameter name="filePath">c:\Users\javie\Desktop\Codigos\Evaluación sol. con IA\agente-inmobiliario\README.md
