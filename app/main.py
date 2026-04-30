@@ -5,11 +5,11 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from crewai_tools import tool
-from rag_pipeline import RAGPipeline
-from llm_service import LLMService
-from tools import Tools
-from memory import Memoria
+from crewai.tools import tool
+from .rag_pipeline import RAGPipeline
+from .llm_service import LLMService
+from .tools import Tools
+from .memory import Memoria
 from backend.db import buscar_propiedades, registrar_busqueda
 
 

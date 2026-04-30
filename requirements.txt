@@ -1,9 +1,12 @@
+dotenv
 langchain
 openai
 faiss-cpu
 tiktoken
 crewai
+crewai-tools
 langchain-community
+langchain-core
 streamlit
 pandas
 sentence-transformers
