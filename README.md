@@ -142,7 +142,14 @@ Si necesitas generar datos nuevos, revisa `scraping/scraper.py`.
 python app/main.py
 ```
 
-Esto iniciará el agente y procesará una consulta de ejemplo.
+Esto iniciará el agente y procesará consultas de ejemplo.
+
+### Ejecutar la demostración end-to-end con memoria
+```bash
+python demo_end_to_end.py
+```
+
+Este script ejecuta una consulta inicial y un follow-up, y muestra el historial persistido para probar que la memoria se está usando efectivamente.
 
 ### Usar la Interfaz Web
 ```bash

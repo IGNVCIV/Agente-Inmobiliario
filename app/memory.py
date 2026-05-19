@@ -105,6 +105,74 @@ class Memoria:
 
         return "\n".join(partes) if partes else ""
 
+    def extraer_preferencias(self) -> dict:
+        """Extrae preferencias implícitas del historial conversacional."""
+        comunas = set()
+        precios = []
+        dormitorios = []
+        amenities = set()
+
+        for mensaje in self.historial:
+            texto = mensaje["content"].lower()
+
+            # Detectar comunas simples por mención directa
+            for comuna in [
+                "las condes", "providencia", "vitacura", "ñuñoa", "santiago",
+                "la reina", "lo barnechea", "macul", "san miguel", "recoleta",
+                "peñalolén", "estación central", "estacion central",
+            ]:
+                if comuna in texto:
+                    comunas.add(comuna.title())
+
+            # Detectar rangos de precio máximos en UF
+            if "uf" in texto:
+                tokens = texto.replace("$", " ").replace("uf", " uf ").split()
+                for i, token in enumerate(tokens):
+                    if token.isdigit() and i + 1 < len(tokens) and tokens[i + 1] == "uf":
+                        precios.append(int(token))
+
+            # Detectar número de dormitorios
+            for palabra in ["dormitorios", "dormitorio", "habitación", "habitaciones"]:
+                if palabra in texto:
+                    partes = texto.replace(".", "").replace(",", "").split()
+                    for idx, item in enumerate(partes):
+                        if item.isdigit() and idx + 1 < len(partes) and partes[idx + 1] in ["dormitorios", "dormitorio"]:
+                            dormitorios.append(int(item))
+
+            # Detectar amenities comunes
+            for amenity in ["piscina", "gimnasio", "quincho", "bodega", "ascensor", "terraza", "jardín", "patio"]:
+                if amenity in texto:
+                    amenities.add(amenity)
+
+        return {
+            "comunas": sorted(comunas) if comunas else None,
+            "precio_maximo_uf": max(precios) if precios else None,
+            "dormitorios": max(dormitorios) if dormitorios else None,
+            "amenities": sorted(amenities) if amenities else None,
+        }
+
+    def get_historial_para_llm(self, n_turnos: int = 5) -> list[dict]:
+        """Retorna los últimos n_turnos en formato compatible con OpenAI messages."""
+        recientes = self.historial[-n_turnos:]
+        return [{"role": m["role"], "content": m["content"]} for m in recientes]
+
+    def es_followup(self, query: str) -> bool:
+        """Heurística simple para detectar consultas de seguimiento."""
+        if not query:
+            return False
+
+        texto = query.lower().strip()
+        palabras = texto.replace("?", "").replace(".", "").split()
+        followup_keywords = [
+            "ese", "esa", "esos", "también", "además", "qué más",
+            "mismo", "anterior", "esa misma",
+        ]
+
+        if len(palabras) < 8:
+            return True
+
+        return any(keyword in texto for keyword in followup_keywords)
+
     # ── UTILIDADES ────────────────────────────────────────────
 
     def limpiar(self):

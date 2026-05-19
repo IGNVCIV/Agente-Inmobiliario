@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError, APIConnectionError
 
 load_dotenv()
 
@@ -15,7 +15,14 @@ SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "system_promp
 
 class LLMService:
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("GITHUB_TOKEN"))
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            raise ValueError(
+                "❌ OPENAI_API_KEY no configurada. "
+                "Por favor, configura la variable de entorno OPENAI_API_KEY en tu archivo .env. "
+                "Consulta .env.example para más detalles."
+            )
+        self.client = OpenAI(api_key=openai_api_key)
         self.system_prompt = self._load_system_prompt()
 
     def _load_system_prompt(self) -> str:
@@ -44,25 +51,36 @@ class LLMService:
             f"\n\nConsulta: {query}"
         )
 
-        response = self.client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-        )
-        content = response.choices[0].message.content
-        criteria = self._parse_json(content)
-        return {
-            "presupuesto_min": criteria.get("presupuesto_min"),
-            "presupuesto_max": criteria.get("presupuesto_max"),
-            "moneda": criteria.get("moneda"),
-            "comuna": criteria.get("comuna"),
-            "dormitorios_min": criteria.get("dormitorios_min"),
-            "banos_min": criteria.get("banos_min"),
-            "caracteristicas_adicionales": criteria.get("caracteristicas_adicionales"),
-        }
+        try:
+            response = self.client.chat.completions.create(
+                model=DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.0,
+            )
+            content = response.choices[0].message.content
+            criteria = self._parse_json(content)
+            return {
+                "presupuesto_min": criteria.get("presupuesto_min"),
+                "presupuesto_max": criteria.get("presupuesto_max"),
+                "moneda": criteria.get("moneda"),
+                "comuna": criteria.get("comuna"),
+                "dormitorios_min": criteria.get("dormitorios_min"),
+                "banos_min": criteria.get("banos_min"),
+                "caracteristicas_adicionales": criteria.get("caracteristicas_adicionales"),
+            }
+        except AuthenticationError:
+            raise ValueError(
+                "❌ Error de autenticación con OpenAI API. "
+                "Verifica que tu OPENAI_API_KEY sea válida en el archivo .env."
+            )
+        except APIConnectionError as e:
+            raise ConnectionError(
+                f"❌ Error de conexión con OpenAI API: {str(e)}. "
+                "Por favor, verifica tu conexión a Internet."
+            )
 
     def _format_properties(self, properties: List[Dict[str, Any]]) -> str:
         if not properties:
@@ -83,7 +101,14 @@ class LLMService:
             )
         return "\n".join(bloques)
 
-    def generate_response(self, properties: List[Dict[str, Any]], query: str, context: Optional[str] = None) -> str:
+    def generate_response(
+        self,
+        properties: List[Dict[str, Any]],
+        query: str,
+        context: Optional[str] = None,
+        historial: Optional[List[Dict[str, str]]] = None,
+    ) -> str:
+        """Genera una respuesta usando propiedades recuperadas y memoria conversacional."""
         properties_text = self._format_properties(properties)
         context_text = f"Contexto adicional: {context}\n\n" if context else ""
 
@@ -105,12 +130,25 @@ class LLMService:
             "Explica brevemente por qué estas opciones son adecuadas."
         )
 
-        response = self.client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.2,
-        )
-        return response.choices[0].message.content
+        messages = [{"role": "system", "content": self.system_prompt}]
+        if historial:
+            messages.extend(historial)
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            response = self.client.chat.completions.create(
+                model=DEFAULT_MODEL,
+                messages=messages,
+                temperature=0.2,
+            )
+            return response.choices[0].message.content
+        except AuthenticationError:
+            raise ValueError(
+                "❌ Error de autenticación con OpenAI API. "
+                "Verifica que tu OPENAI_API_KEY sea válida en el archivo .env."
+            )
+        except APIConnectionError as e:
+            raise ConnectionError(
+                f"❌ Error de conexión con OpenAI API: {str(e)}. "
+                "Por favor, verifica tu conexión a Internet."
+            )

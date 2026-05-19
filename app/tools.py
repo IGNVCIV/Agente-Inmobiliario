@@ -5,6 +5,8 @@ import requests
 from dotenv import load_dotenv
 from geopy.distance import geodesic
 
+from backend.db import guardar_favorito, listar_favoritos
+
 load_dotenv()
 
 class Tools:
@@ -63,3 +65,36 @@ class Tools:
     def calculate_distance(coord1, coord2):
         # coord1 y coord2 como tuplas (lat, lon)
         return geodesic(coord1, coord2).km
+
+    @staticmethod
+    def guardar_propiedad_favorita(propiedad_id: int, nota: str = "") -> str:
+        """Guarda una propiedad como favorita y devuelve un mensaje de confirmación."""
+        try:
+            resultado = guardar_favorito(propiedad_id=propiedad_id, nota=nota)
+            if resultado.get("success"):
+                return "✅ Propiedad guardada en Favoritos."
+            return f"⚠️ No se pudo guardar el favorito: {resultado.get('mensaje')}"
+        except Exception as e:
+            return f"❌ Error al guardar favorito: {str(e)}"
+
+    @staticmethod
+    def listar_propiedades_favoritas() -> str:
+        """Retorna una lista formateada de propiedades marcadas como favoritas."""
+        try:
+            favoritos = listar_favoritos()
+            if not favoritos:
+                return "No tienes favoritos aún."
+
+            lineas = ["Favoritos recientes:"]
+            for fav in favoritos:
+                precio = fav.get("precio_uf") if fav.get("precio_uf") is not None else fav.get("precio_valor")
+                moneda = "UF" if fav.get("precio_uf") is not None else "CLP"
+                titulo = fav.get("titulo") or "Título no disponible"
+                comuna = fav.get("comuna") or "Comuna no disponible"
+                nota = fav.get("nota") or "Sin nota"
+                lineas.append(
+                    f"- [{fav.get('propiedad_id')}] {titulo} | {precio} {moneda} | {comuna} | Nota: {nota}"
+                )
+            return "\n".join(lineas)
+        except Exception as e:
+            return f"❌ Error al listar favoritos: {str(e)}"

@@ -6,6 +6,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 import pandas as pd
+from typing import Optional
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
@@ -43,6 +44,8 @@ class RAGPipeline:
         embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')
         self.vectorstore = FAISS.from_documents(documents, embeddings)
 
-    def retrieve_properties(self, query: str, k: int = 3):
-        docs = self.vectorstore.similarity_search(query, k=k)
+    def retrieve_properties(self, query: str, k: int = 3, memory_context: Optional[str] = None):
+        """Recupera propiedades usando RAG y opcionalmente usa contexto de memoria para enriquecer la consulta."""
+        enhanced_query = f"{memory_context} {query}" if memory_context else query
+        docs = self.vectorstore.similarity_search(enhanced_query, k=k)
         return [doc.metadata for doc in docs]

@@ -9,6 +9,7 @@ Responsabilidades:
 
 import os
 import sqlite3
+import uuid
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
@@ -51,6 +52,14 @@ CREATE TABLE IF NOT EXISTS busquedas_log (
     sql_gen   TEXT,
     n_results INTEGER,
     proveedor TEXT
+);
+
+CREATE TABLE IF NOT EXISTS favoritos (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    propiedad_id  INTEGER,
+    nota          TEXT,
+    guardado_en   TEXT,
+    sesion_id     TEXT
 );
 """
 
@@ -272,7 +281,50 @@ def buscar_propiedades(
     return rows
 
 
-# ══════════════════════════════════════════════════════════════
+def guardar_favorito(propiedad_id: int, nota: str = "", db_path: str = DB_PATH) -> dict:
+    """Guarda una propiedad como favorita en la base de datos."""
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS favoritos ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "propiedad_id INTEGER, "
+            "nota TEXT, "
+            "guardado_en TEXT, "
+            "sesion_id TEXT"
+            ")"
+        )
+        sesion_id = str(uuid.uuid4())
+        guardado_en = str(datetime.now())
+        conn.execute(
+            "INSERT INTO favoritos (propiedad_id, nota, guardado_en, sesion_id) VALUES (?, ?, ?, ?)",
+            (propiedad_id, nota, guardado_en, sesion_id),
+        )
+        conn.commit()
+        conn.close()
+        return {"success": True, "mensaje": "Propiedad guardada como favorita correctamente."}
+    except Exception as e:
+        return {"success": False, "mensaje": f"Error guardando favorito: {str(e)}"}
+
+
+def listar_favoritos(db_path: str = DB_PATH) -> list[dict]:
+    """Retorna los favoritos recientes con información básica de la propiedad."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    sql = (
+        "SELECT f.id AS favorito_id, f.propiedad_id, f.nota, f.guardado_en, "
+        "p.titulo, p.precio_uf, p.precio_valor, p.comuna "
+        "FROM favoritos f "
+        "LEFT JOIN propiedades p ON p.id = f.propiedad_id "
+        "ORDER BY f.id DESC LIMIT 10"
+    )
+    cur = conn.execute(sql)
+    rows = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+# ══════════════════════════════════════════════════════════════════════
 # ESTADÍSTICAS RÁPIDAS
 # ══════════════════════════════════════════════════════
 
