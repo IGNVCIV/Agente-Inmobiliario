@@ -88,77 +88,121 @@ Ver `requirements.txt` para la lista completa.
 ## Instalación y Configuración
 
 ### 1. Clonar el Repositorio
+Abre tu terminal (PowerShell, CMD o Terminal de Mac/Linux) y navega a la carpeta donde guardaste el proyecto:
+
 ```bash
-git clone <url-del-repositorio>
-cd agente-inmobiliario
+cd /ruta/hacia/tu/carpeta/agente-inmobiliario
 ```
 
-### 2. Crear Entorno Virtual
+> Nota: reemplaza `/ruta/hacia/tu/carpeta/` por la ubicación real en tu equipo.
+
+### 2. Crear el Entorno Virtual
 ```bash
 python -m venv .venv
-# En Windows:
-.venv\Scripts\activate
-# En Linux/Mac:
-source .venv/bin/activate
 ```
 
-### 3. Instalar Dependencias
+### 3. Activar el Entorno Virtual
+Ejecuta el comando correspondiente a tu sistema:
+
+- Windows (PowerShell):
+  ```powershell
+  .venv\Scripts\Activate.ps1
+  ```
+  Si aparece un error de permisos, primero ejecuta:
+  ```powershell
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+  ```
+
+- Windows (CMD tradicional):
+  ```cmd
+  .venv\Scripts\activate.bat
+  ```
+
+- Mac / Linux:
+  ```bash
+  source .venv/bin/activate
+  ```
+
+### 4. Instalar Dependencias
+Con el entorno virtual activo, ejecuta:
+
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Ejecutar pruebas
-```bash
-pytest tests/test_data_pipeline.py
-```
-
-### 4. Configurar Variables de Entorno
-Crear un archivo `.env` en la raíz del proyecto con las siguientes variables:
+### 5. Configurar Variables de Entorno
+Crea un archivo `.env` en la raíz del proyecto (donde está `requirements.txt`) con este contenido:
 
 ```env
-OPENAI_BASE_URL=https://models.inference.ai.azure.com
-OPENAI_EMBEDDINGS_URL=https://models.github.ai/inference
-GITHUB_TOKEN=ghp_...  # Tu token de GitHub para OpenAI
-LANGSMITH_TRACING=
-LANGSMITH_API_KEY=
-LANGSMITH_PROJECT=
-BCCH_USER=tu_usuario@dominio.cl  # Usuario del Banco Central
-BCCH_PASS=tu_contraseña  # Contraseña del Banco Central
-BCCH_SERIE_UF=F073.UFF.PRE.Z.D  # Serie UF del Banco Central
+OPENAI_API_KEY=tu_clave_aqui
+OPENAI_MODEL=gpt-4o-mini
+BCCH_USER=tu_usuario_banco_central_si_tienes
+BCCH_PASS=tu_password_banco_central_si_tienes
 ```
 
-**Nota**: Las credenciales del Banco Central se obtienen registrándose en [SI3 Banco Central](https://si3.bcentral.cl/Indicadoressiete/secure/Indicadoresdiarios.aspx).
+> Si no configuras las credenciales del Banco Central de Chile, el sistema activará un fallback automático.
 
-### 5. Preparar Datos
-Asegúrate de que los archivos de datos estén en `data/processed/`:
-- `propiedades_detalle.csv` o `propiedades_detalle_parcial.csv`
+### 6. Preparar Datos
+Asegúrate de tener uno de estos archivos en `data/processed/`:
+- `propiedades_detalle.csv`
+- `propiedades_detalle_parcial.csv`
 
 Si necesitas generar datos nuevos, revisa `scraping/scraper.py`.
 
-## Uso
+## Guía de Ejecución y Testeo
 
-### Ejecutar el Agente
-```bash
-python app/main.py
-```
+### Ejecutar Demo en Terminal (CLI)
+Para verificar el flujo de consultas, respuestas e historial:
 
-Esto iniciará el agente y procesará consultas de ejemplo.
-
-### Ejecutar la demostración end-to-end con memoria
 ```bash
 python demo_end_to_end.py
 ```
 
-Este script ejecuta una consulta inicial y un follow-up, y muestra el historial persistido para probar que la memoria se está usando efectivamente.
+### Ejecutar la Aplicación Web (Streamlit)
+Para abrir la interfaz gráfica en el navegador:
 
-### Usar la Interfaz Web
 ```bash
-streamlit run ui/streamlit_app.py
+python -m streamlit run ui/streamlit_app.py
 ```
 
-Esto abrirá la interfaz web en el navegador para consultas interactivas.
+Después de ejecutar este comando, abre en tu navegador:
+
+```text
+http://localhost:8501
+```
+
+### Comandos Rápidos (Copy-Paste)
+Si ya estás en la carpeta del proyecto, usa estos bloques para instalar y ejecutar rápidamente.
+
+- Terminal 1: instalar dependencias y ejecutar demo
+
+```bash
+python -m venv .venv; .venv\Scripts\Activate.ps1; pip install --upgrade pip; pip install -r requirements.txt; python demo_end_to_end.py
+```
+
+- Terminal 2: levantar la app web
+
+```bash
+.venv\Scripts\Activate.ps1; python -m streamlit run ui/streamlit_app.py
+```
+
+> Para Mac/Linux, sustituye `.venv\Scripts\Activate.ps1` por `source .venv/bin/activate`.
+
+### Ejecución Opcional del Agente Principal
+```bash
+python app/main.py
+```
+
+Esto iniciará el agente y procesará consultas de ejemplo en la terminal.
 
 ### Probar Funcionalidades
+```bash
+pytest tests/test_data_pipeline.py
+```
+
+o bien:
+
 ```bash
 python test.py
 ```
@@ -167,14 +211,32 @@ python test.py
 ```python
 from app.tools import Tools
 
-# Obtener valor UF
 uf = Tools.get_uf_value()
 print(f"Valor UF actual: {uf}")
 
-# Calcular distancia
-dist = Tools.calculate_distance((-33.4489, -70.6693), (-33.4569, -70.6483))  # Santiago a Providencia
+dist = Tools.calculate_distance((-33.4489, -70.6693), (-33.4569, -70.6483))
 print(f"Distancia: {dist} km")
 ```
+
+## Despliegue
+
+### Desarrollo Local
+Sigue los pasos de instalación arriba. El agente se puede ejecutar localmente con las dependencias instaladas.
+
+### Producción
+Para desplegar en un servidor:
+1. Configura un servidor con Python 3.8+.
+2. Instala dependencias y configura `.env`.
+3. Ejecuta `python app/main.py` o integra en una aplicación web con Streamlit.
+
+### Integración con Streamlit
+El proyecto incluye una interfaz web en `ui/streamlit_app.py`. Para ejecutarla:
+
+```bash
+python -m streamlit run ui/streamlit_app.py
+```
+
+Esto permite consultas interactivas al agente desde el navegador.
 
 ## Despliegue
 
