@@ -1,0 +1,13 @@
+{
+  "total_queries": 10,
+  "success_count": 10,
+  "error_count": 0,
+  "error_rate": 0.0,
+  "latency_avg_ms": 19096.91,
+  "latency_p95_ms": 28321.59,
+  "precision_avg": 1.0,
+  "consistency_avg": 1.0,
+  "provider": "ollama_local",
+  "model_name": "llama3.2:3b",
+  "nota_costos": "El proveedor principal es Ollama local. El costo real de API se registra como 0 USD. El costo OpenAI mostrado en observabilidad es una simulación referencial para análisis de sostenibilidad."
+}

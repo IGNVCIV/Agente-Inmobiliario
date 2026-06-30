@@ -1,310 +1,634 @@
 # Agente Inmobiliario con IA
 
-Este proyecto implementa un agente virtual experto en propiedades de la Región Metropolitana de Chile, utilizando técnicas de IA como RAG (Retrieval-Augmented Generation) y herramientas integradas para consultas sobre propiedades inmobiliarias.
+Sistema de agente inmobiliario con inteligencia artificial para búsqueda, recomendación y análisis de propiedades en la Región Metropolitana de Chile.
 
-## Arquitectura
+El proyecto permite consultar propiedades mediante lenguaje natural, recuperar información desde una base local, generar respuestas estructuradas con un modelo de lenguaje y monitorear el comportamiento del agente mediante métricas de observabilidad, costos referenciales, trazabilidad y dashboard operativo.
 
-El agente está construido con los siguientes componentes principales:
+---
 
-> Ver también: `docs/architecture.md` para el diagrama de flujo de datos y componentes.
+## Descripción General
 
+El sistema funciona como un centro operativo inmobiliario con IA. Integra una base local de propiedades, recuperación semántica, memoria conversacional, modelo de lenguaje local y una interfaz web para interactuar con el agente.
 
-### 1. **LLMService** (`app/llm_service.py`)
-- Maneja las interacciones con el modelo de lenguaje de OpenAI (GPT-4o-mini).
-- Extrae criterios de búsqueda de consultas de usuarios.
-- Genera respuestas estructuradas basadas en propiedades recuperadas.
+El flujo principal permite que un usuario realice consultas como:
 
-### 2. **RAGPipeline** (`app/rag_pipeline.py`)
-- Implementa Retrieval-Augmented Generation para recuperar propiedades relevantes.
-- Utiliza FAISS para indexación vectorial y Sentence Transformers para embeddings.
-- Procesa datos de propiedades desde archivos CSV en `data/processed/`.
+```text
+Busco departamento de 3 dormitorios en Las Condes por menos de 2500 UF.
+```
 
-### 2.1 **Backend Data Pipeline** (`backend/data_pipeline.py`)
-- Normaliza y limpia información de propiedades antes de generar embeddings.
-- Unifica formatos de precio a UF, números de dormitorios/baños, ubicaciones y descripciones.
-- Genera texto de documento optimizado para RAG con menos ruido semántico.
-- Permite almacenar `precio_uf` y `rag_text` en la DB para búsquedas consistentes.
+```text
+Necesito algo con piscina y cerca del metro.
+```
 
-### 3. **Tools** (`app/tools.py`)
-- **get_uf_value()**: Consulta el valor actual de la UF desde la API del Banco Central de Chile usando credenciales configuradas en variables de entorno.
-- **calculate_distance()**: Calcula distancias entre coordenadas usando Geopy.
-- **retrieve_properties()**: Recupera propiedades usando el pipeline RAG.
-- Integrado con CrewAI para herramientas del agente.
+```text
+Muéstrame las alternativas más económicas disponibles.
+```
 
-### 4. **RealEstateAgent** (`app/main.py`)
-- Agente principal construido con LangChain y OpenAI Functions Agent.
-- Integra herramientas para responder consultas sobre propiedades, precios en UF y distancias.
-- Utiliza memoria conversacional persistente y base de datos SQLite para búsquedas eficientes.
+El agente interpreta la solicitud, extrae criterios relevantes, busca propiedades disponibles y genera una respuesta basada en datos recuperados desde el sistema.
 
-### 5. **Memory** (`app/memory.py`)
-- Gestiona el historial conversacional persistente del agente.
-- Implementa ventana deslizante para mantener los últimos turnos de conversación en un archivo JSON.
+---
 
-### 6. **Database** (`backend/db.py`)
-- Almacena propiedades en SQLite con actualización automática de valores UF desde la API del Banco Central.
-- Registra búsquedas para análisis y mejora del sistema.
+## Características Principales
 
-### 7. **UI** (`ui/streamlit_app.py`)
-- Interfaz web simple construida con Streamlit para interactuar con el agente inmobiliario.
-- Permite consultas en tiempo real y visualización de respuestas.
+- Búsqueda inmobiliaria mediante lenguaje natural.
+- Recuperación de propiedades desde SQLite.
+- Recuperación semántica mediante RAG.
+- Modelo de lenguaje local con Ollama.
+- Memoria conversacional para consultas de seguimiento.
+- Interfaz web en Streamlit.
+- Dashboard operativo con KPIs.
+- Vista de trazabilidad por ejecución.
+- Registro de latencia, errores, proveedor, modelo, tokens y costos referenciales.
+- Separación entre costo real de API y costo comparativo estimado.
+- Uso de variables de entorno para configuración segura.
 
-### 8. **Prompts** (`app/prompts/system_prompt.txt`)
-- Define el comportamiento del agente como asesor virtual experto.
+---
 
-### 9. **Tests** (`tests/`)
-- Pruebas unitarias para validar el funcionamiento del data pipeline y otros componentes.
+## Arquitectura del Sistema
 
-## Modelos Utilizados
+El proyecto está compuesto por los siguientes módulos principales:
 
-- **Modelo de Lenguaje**: GPT-4o-mini (via OpenAI API)
-- **Embeddings**: Sentence Transformers (para RAG)
-- **Indexación Vectorial**: FAISS
-- **Framework de Agente**: LangChain y CrewAI
-- **Base de Datos**: SQLite
-- **Interfaz Web**: Streamlit
+### 1. Agente Principal — `app/main.py`
+
+Coordina el flujo completo de una consulta:
+
+1. Recibe la consulta del usuario.
+2. Guarda el mensaje en memoria conversacional.
+3. Extrae criterios de búsqueda.
+4. Combina criterios nuevos con contexto previo.
+5. Planifica la estrategia de búsqueda.
+6. Recupera propiedades desde SQLite, herramientas o RAG.
+7. Genera una respuesta con el modelo de lenguaje.
+8. Actualiza memoria y contexto activo.
+9. Registra métricas de observabilidad.
+
+---
+
+### 2. Servicio de Modelo de Lenguaje — `app/llm_service.py`
+
+Gestiona la interacción con el proveedor LLM.
+
+Proveedor principal:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2:3b
+```
+
+El sistema utiliza Ollama local mediante Docker, lo que permite ejecutar el modelo de lenguaje sin depender directamente de una API externa para el flujo principal.
+
+---
+
+### 3. Observabilidad — `app/observability.py`
+
+Registra información técnica de cada ejecución del agente en la tabla:
+
+```text
+observability_log
+```
+
+La observabilidad permite analizar el comportamiento del sistema, revisar trazabilidad, detectar errores, medir latencia, revisar tokens y comparar costos referenciales.
+
+Métricas principales registradas:
+
+- `run_id`
+- `timestamp`
+- `query_hash`
+- `query_preview`
+- `status`
+- `error_type`
+- `error_message`
+- `provider`
+- `model_name`
+- `n_results`
+- `latency_total_ms`
+- `latency_criteria_ms`
+- `latency_planner_ms`
+- `latency_crew_ms`
+- `latency_rag_ms`
+- `latency_generation_ms`
+- `cpu_percent`
+- `memory_mb`
+- `prompt_tokens`
+- `completion_tokens`
+- `total_tokens`
+- `actual_cost_usd`
+- `estimated_openai_cost_usd`
+- `precision_score`
+- `consistency_group`
+- `notes`
+
+---
+
+### 4. RAG Pipeline — `app/rag_pipeline.py`
+
+Implementa recuperación aumentada por generación para encontrar propiedades relevantes a partir de la consulta del usuario.
+
+Utiliza:
+
+- FAISS para indexación vectorial.
+- Sentence Transformers para embeddings.
+- Datos procesados desde `data/processed/`.
+
+---
+
+### 5. Base de Datos — `backend/db.py`
+
+Gestiona la base de datos SQLite del proyecto:
+
+```text
+backend/propiedades.db
+```
+
+Funciones principales:
+
+- Almacenamiento de propiedades.
+- Búsquedas estructuradas.
+- Registro histórico de búsquedas.
+- Lectura de datos para dashboard y trazabilidad.
+- Integración con el flujo principal del agente.
+
+---
+
+### 6. Pipeline de Datos — `backend/data_pipeline.py`
+
+Normaliza y prepara información inmobiliaria antes de usarla en búsqueda estructurada o RAG.
+
+Procesa campos como:
+
+- Precio.
+- Comuna.
+- Dormitorios.
+- Baños.
+- Metros cuadrados.
+- Amenities.
+- Texto optimizado para recuperación semántica.
+
+---
+
+### 7. Memoria Conversacional — `app/memory.py`
+
+Mantiene contexto entre turnos de conversación.
+
+Esto permite consultas de seguimiento como:
+
+```text
+¿Y ahora con piscina?
+```
+
+```text
+Muéstrame opciones parecidas pero más económicas.
+```
+
+---
+
+### 8. Herramientas — `app/tools.py`
+
+Incluye funciones auxiliares utilizadas por el agente:
+
+- Consulta de valor UF.
+- Cálculo de distancia.
+- Recuperación de propiedades.
+- Herramientas de apoyo para búsqueda inmobiliaria.
+
+---
+
+### 9. Portal Streamlit — `ui/agent_portal.py`
+
+Interfaz principal del sistema.
+
+Se ejecuta con:
+
+```bash
+python -m streamlit run ui/agent_portal.py
+```
+
+Módulos disponibles:
+
+- **Inicio**: vista general del sistema.
+- **Agente IA**: interfaz conversacional.
+- **Dashboard**: KPIs operativos.
+- **Trazabilidad**: logs, timeline y auditoría de ejecuciones.
+
+---
+
+### 10. Evaluador Operativo — `scripts/run_observability_eval.py`
+
+Script de ejecución controlada para generar datos de monitoreo y revisar el comportamiento del agente en distintos escenarios de consulta.
+
+Genera:
+
+```text
+data/observability/eval_results.csv
+data/observability/eval_summary.json
+```
+
+---
+
+## Proveedor LLM y Costos
+
+El proveedor principal del sistema es **Ollama local**.
+
+Esto permite ejecutar el modelo en entorno local mediante Docker. En este modo, el costo real de API externa se registra como:
+
+```text
+actual_cost_usd = 0.0
+```
+
+Además, el sistema calcula un costo comparativo estimado mediante:
+
+```text
+estimated_openai_cost_usd
+```
+
+Este valor es solo una referencia técnica para comparar escenarios de escalabilidad con proveedores cloud. No representa facturación real.
+
+Variables asociadas:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_MODEL=llama3.2:3b
+OPENAI_SIM_MODEL=gpt-4o-mini
+```
+
+---
 
 ## Requisitos del Sistema
 
-- Python 3.8+
-- Cuenta de OpenAI con API key
-- Credenciales del Banco Central de Chile (para API UF)
-- SQLite (incluido con Python)
-- Entorno virtual recomendado
+Se recomienda usar:
 
-## Dependencias Principales
+- Python 3.11 o 3.12.
+- Docker Desktop.
+- SQLite.
+- Navegador web moderno.
+- Entorno virtual de Python.
 
-- **LangChain**: Framework para agentes de IA
-- **CrewAI**: Herramientas para agentes
-- **OpenAI**: API de modelos de lenguaje
-- **FAISS**: Indexación vectorial
-- **Streamlit**: Interfaz web
-- **Pandas**: Manipulación de datos
-- **Sentence Transformers**: Embeddings de texto
-- **Geopy**: Cálculos de distancia
-- **Requests**: Llamadas HTTP
+No se recomienda Python 3.14 para este proyecto, ya que algunas dependencias pueden requerir binarios nativos no disponibles o compilación adicional en Windows.
 
-Ver `requirements.txt` para la lista completa.
+---
 
-## Instalación y Configuración
+## Instalación
 
-### 1. Clonar el Repositorio
-Abre tu terminal (PowerShell, CMD o Terminal de Mac/Linux) y navega a la carpeta donde guardaste el proyecto:
+### 1. Entrar a la carpeta del proyecto
 
 ```bash
-cd /ruta/hacia/tu/carpeta/agente-inmobiliario
+cd agente-inmobiliario
 ```
 
-> Nota: reemplaza `/ruta/hacia/tu/carpeta/` por la ubicación real en tu equipo.
+---
 
-### 2. Crear el Entorno Virtual
+### 2. Crear entorno virtual
+
+Windows:
+
+```bash
+py -3.12 -m venv .venv
+```
+
+O usando Python configurado en el sistema:
+
 ```bash
 python -m venv .venv
 ```
 
-### 3. Activar el Entorno Virtual
-Ejecuta el comando correspondiente a tu sistema:
+---
 
-- Windows (PowerShell):
-  ```powershell
-  .venv\Scripts\Activate.ps1
-  ```
-  Si aparece un error de permisos, primero ejecuta:
-  ```powershell
-  Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-  ```
+### 3. Activar entorno virtual
 
-- Windows (CMD tradicional):
-  ```cmd
-  .venv\Scripts\activate.bat
-  ```
+Windows CMD:
 
-- Mac / Linux:
-  ```bash
-  source .venv/bin/activate
-  ```
-
-### 4. Instalar Dependencias
-Con el entorno virtual activo, ejecuta:
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+```cmd
+.venv\Scripts\activate.bat
 ```
 
-### 5. Configurar Variables de Entorno
-Crea un archivo `.env` en la raíz del proyecto (donde está `requirements.txt`) con este contenido:
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Mac/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+---
+
+### 4. Instalar dependencias
+
+Se recomienda usar `python -m pip` para evitar conflictos con instalaciones globales:
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+```
+
+---
+
+## Configuración
+
+Crear un archivo `.env` en la raíz del proyecto a partir de `.env.example`.
+
+Ejemplo de configuración local:
 
 ```env
-OPENAI_API_KEY=tu_clave_aqui
-OPENAI_MODEL=gpt-4o-mini
-BCCH_USER=tu_usuario_banco_central_si_tienes
-BCCH_PASS=tu_password_banco_central_si_tienes
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_MODEL=llama3.2:3b
+
+OPENAI_SIM_MODEL=gpt-4o-mini
+
+BCCH_USER=
+BCCH_PASS=
+
+OBS_DB_PATH=backend/propiedades.db
+OBS_EVAL_RESULTS_PATH=data/observability/eval_results.csv
+OBS_EVAL_SUMMARY_PATH=data/observability/eval_summary.json
 ```
 
-> Si no configuras las credenciales del Banco Central de Chile, el sistema activará un fallback automático.
+El archivo `.env` no debe subirse al repositorio.
 
-### 6. Preparar Datos
-Asegúrate de tener uno de estos archivos en `data/processed/`:
-- `propiedades_detalle.csv`
-- `propiedades_detalle_parcial.csv`
+---
 
-Si necesitas generar datos nuevos, revisa `scraping/scraper.py`.
+## Ejecución
 
-## Guía de Ejecución y Testeo
-
-### Ejecutar Demo en Terminal (CLI)
-Para verificar el flujo de consultas, respuestas e historial:
+### 1. Levantar Ollama con Docker
 
 ```bash
-python demo_end_to_end.py
+docker compose up -d
 ```
 
-### Ejecutar la Aplicación Web (Streamlit)
-Para abrir la interfaz gráfica en el navegador:
+Verificar contenedores activos:
 
 ```bash
-python -m streamlit run ui/streamlit_app.py
+docker ps
 ```
 
-Después de ejecutar este comando, abre en tu navegador:
+---
+
+### 2. Verificar modelos disponibles en Ollama
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+Si el modelo no está disponible, descargarlo:
+
+```bash
+docker compose exec ollama ollama pull llama3.2:3b
+```
+
+---
+
+### 3. Ejecutar el portal web
+
+```bash
+python -m streamlit run ui/agent_portal.py
+```
+
+Abrir en el navegador:
 
 ```text
 http://localhost:8501
 ```
 
-### Comandos Rápidos (Copy-Paste)
-Si ya estás en la carpeta del proyecto, usa estos bloques para instalar y ejecutar rápidamente.
+---
 
-- Terminal 1: instalar dependencias y ejecutar demo
-
-```bash
-python -m venv .venv; .venv\Scripts\Activate.ps1; pip install --upgrade pip; pip install -r requirements.txt; python demo_end_to_end.py
-```
-
-- Terminal 2: levantar la app web
+### 4. Ejecutar generación de datos de observabilidad
 
 ```bash
-.venv\Scripts\Activate.ps1; python -m streamlit run ui/streamlit_app.py
+python scripts/run_observability_eval.py
 ```
 
-> Para Mac/Linux, sustituye `.venv\Scripts\Activate.ps1` por `source .venv/bin/activate`.
+---
 
-### Ejecución Opcional del Agente Principal
-```bash
-python app/main.py
-```
-
-Esto iniciará el agente y procesará consultas de ejemplo en la terminal.
-
-### Probar Funcionalidades
-```bash
-pytest tests/test_data_pipeline.py
-```
-
-o bien:
+### 5. Ejecutar pruebas
 
 ```bash
-python test.py
+pytest
 ```
 
-### Usar Herramientas Individualmente
-```python
-from app.tools import Tools
-
-uf = Tools.get_uf_value()
-print(f"Valor UF actual: {uf}")
-
-dist = Tools.calculate_distance((-33.4489, -70.6693), (-33.4569, -70.6483))
-print(f"Distancia: {dist} km")
-```
-
-## Despliegue
-
-### Desarrollo Local
-Sigue los pasos de instalación arriba. El agente se puede ejecutar localmente con las dependencias instaladas.
-
-### Producción
-Para desplegar en un servidor:
-1. Configura un servidor con Python 3.8+.
-2. Instala dependencias y configura `.env`.
-3. Ejecuta `python app/main.py` o integra en una aplicación web con Streamlit.
-
-### Integración con Streamlit
-El proyecto incluye una interfaz web en `ui/streamlit_app.py`. Para ejecutarla:
+O solo pruebas de observabilidad:
 
 ```bash
-python -m streamlit run ui/streamlit_app.py
+pytest tests/test_observability.py
 ```
 
-Esto permite consultas interactivas al agente desde el navegador.
+---
 
-## Despliegue
+## Uso del Portal
 
-### Desarrollo Local
-Sigue los pasos de instalación arriba. El agente se ejecuta localmente con las dependencias instaladas.
+### Inicio
 
-### Producción
-Para desplegar en un servidor:
-1. Configura un servidor con Python 3.8+.
-2. Instala dependencias y configura `.env`.
-3. Ejecuta `python app/main.py` o integra en una aplicación web (ej. con Streamlit en `streamlit_app.py` si se crea).
+Muestra una vista general del estado del sistema:
 
-### Integración con Streamlit
-El proyecto incluye una interfaz web construida con Streamlit en `ui/streamlit_app.py`. Para ejecutarla:
+- Ejecuciones recientes.
+- Latencia promedio.
+- Errores.
+- Costo real de API.
+- Actividad reciente.
+- Notas operativas.
 
-```bash
-streamlit run ui/streamlit_app.py
+---
+
+### Agente IA
+
+Interfaz conversacional para buscar propiedades usando lenguaje natural.
+
+Ejemplos:
+
+```text
+Busco departamento de 3 dormitorios en Las Condes por menos de 2500 UF.
 ```
 
-Esto permite consultas interactivas al agente a través del navegador.
+```text
+Necesito algo con piscina y cerca del metro.
+```
+
+```text
+Muéstrame las alternativas más económicas disponibles.
+```
+
+---
+
+### Dashboard
+
+Vista ejecutiva con indicadores del agente:
+
+- Ejecuciones.
+- Latencia promedio.
+- Latencia p95.
+- Errores.
+- Precisión.
+- Consistencia.
+- Tokens.
+- Costo comparativo estimado.
+
+---
+
+### Trazabilidad
+
+Vista de auditoría técnica del agente:
+
+- Timeline de ejecuciones.
+- Logs.
+- Estado de cada consulta.
+- Proveedor usado.
+- Modelo usado.
+- Costo real de API.
+- Costo comparativo estimado.
+- Tool calls inferidos.
+- Registro original desde `observability_log`.
+
+---
+
+## Observabilidad
+
+La capa de observabilidad permite revisar el comportamiento del agente en cada ejecución.
+
+Cada consulta genera un `run_id` único y registra datos técnicos como latencia, proveedor, modelo, estado, errores, cantidad de resultados y consumo estimado de tokens.
+
+La tabla principal es:
+
+```text
+observability_log
+```
+
+Ubicada en:
+
+```text
+backend/propiedades.db
+```
+
+---
+
+## Seguridad y Privacidad
+
+El proyecto considera las siguientes prácticas:
+
+- Uso de variables de entorno mediante `.env`.
+- Archivo `.env.example` sin claves reales.
+- Exclusión de `.env` del repositorio.
+- Registro de `query_hash` para trazabilidad.
+- Uso de `query_preview` limitado.
+- No registrar claves, tokens privados, RUT, teléfonos, correos ni direcciones exactas.
+- Ejecución local del proveedor LLM mediante Ollama.
+- Separación entre costo real de API y costo comparativo.
+- Respuestas basadas en propiedades recuperadas.
+- Validación humana recomendada para decisiones inmobiliarias.
+
+---
 
 ## Estructura del Proyecto
 
-```
+```text
 agente-inmobiliario/
 ├── app/
-│   ├── llm_service.py      # Servicio de LLM
-│   ├── main.py             # Agente principal
-│   ├── rag_pipeline.py     # Pipeline RAG
-│   ├── tools.py            # Herramientas (UF, distancia)
-│   ├── memory.py           # Memoria conversacional
-│   ├── prompts/
-│   │   └── system_prompt.txt
-│   └── __pycache__/
+│   ├── __init__.py
+│   ├── llm_service.py
+│   ├── main.py
+│   ├── memory.py
+│   ├── observability.py
+│   ├── planner.py
+│   ├── rag_pipeline.py
+│   ├── tools.py
+│   └── prompts/
+│       └── system_prompt.txt
+│
 ├── backend/
-│   ├── data_pipeline.py    # Pipeline de datos
-│   ├── db.py               # Base de datos SQLite
-│   └── __pycache__/
+│   ├── __init__.py
+│   ├── data_pipeline.py
+│   ├── db.py
+│   └── propiedades.db
+│
 ├── data/
-│   ├── processed/          # Datos procesados de propiedades
-│   └── raw/                # Datos crudos
-├── docs/                   # Documentación adicional
-│   └── architecture.md     # Diagrama de arquitectura
-├── scraping/               # Scripts de scraping
-│   ├── scraper.py
-│   └── try.py
-├── tests/                  # Pruebas unitarias
-│   └── test_data_pipeline.py
-├── ui/                     # Interfaz de usuario
-│   └── streamlit_app.py    # App de Streamlit
-├── .env                    # Variables de entorno (no commitear)
-├── requirements.txt        # Dependencias Python
-├── test.py                 # Script de pruebas
-└── README.md               # Este archivo
+│   ├── processed/
+│   ├── raw/
+│   └── observability/
+│       ├── eval_results.csv
+│       └── eval_summary.json
+│
+├── docs/
+│   ├── architecture.md
+│   └── security_responsible_ai.md
+│
+├── scripts/
+│   └── run_observability_eval.py
+│
+├── scraping/
+│   └── scraper.py
+│
+├── tests/
+│   ├── test_data_pipeline.py
+│   └── test_observability.py
+│
+├── ui/
+│   ├── agent_portal.py
+│   ├── agent_screen.py
+│   ├── components.py
+│   ├── data_access.py
+│   ├── observability_dashboard.py
+│   ├── styles.py
+│   └── README.md
+│
+├── docker-compose.yml
+├── Dockerfile
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── test.py
+└── README.md
 ```
 
-## Contribución
+---
 
-1. Fork el proyecto.
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`).
-3. Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`).
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`).
-5. Abre un Pull Request.
+## Comandos Rápidos
 
-## Licencia
+### Instalar dependencias
 
-Este proyecto es de uso educativo. Consulta términos de OpenAI y Banco Central para uso comercial.
+```bash
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+```
 
-## Contacto
+### Levantar Ollama
 
-Para preguntas o soporte, contacta al desarrollador.</content>
+```bash
+docker compose up -d
+```
+
+### Ejecutar portal
+
+```bash
+python -m streamlit run ui/agent_portal.py
+```
+
+### Generar datos de observabilidad
+
+```bash
+python scripts/run_observability_eval.py
+```
+
+### Ejecutar pruebas
+
+```bash
+pytest
+```
+
+---
+
+## Limitaciones
+
+- La latencia depende del hardware local.
+- El modelo local puede tener menor calidad que modelos cloud más grandes.
+- Los tokens pueden ser estimados si el proveedor no entrega desglose completo.
+- El costo comparativo con OpenAI es referencial.
+- Las recomendaciones inmobiliarias no reemplazan validación comercial, legal o profesional.
+
+---
+
+## Uso
+
+Este proyecto está diseñado como una solución local de agente inmobiliario con IA, orientada a búsqueda, recomendación, monitoreo y trazabilidad técnica.

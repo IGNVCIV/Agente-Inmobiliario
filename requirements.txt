@@ -7,10 +7,13 @@ crewai
 crewai-tools
 langchain-community
 langchain-core
+langchain-huggingface
 streamlit
 pandas
 sentence-transformers
+torchvision
 geopy
 requests
+psutil
 python-dotenv
 pytest

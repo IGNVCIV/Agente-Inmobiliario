@@ -1,0 +1,23 @@
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: agente_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  app:
+    build: .
+    container_name: agente_app
+    depends_on:
+      - ollama
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python -c "from app.llm_service import LLMService; llm=LLMService(); print(llm.extract_criteria('Busco departamento en Providencia por menos de 2500 UF'))"
+
+volumes:
+  ollama_data:
